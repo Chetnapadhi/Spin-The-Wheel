@@ -96,11 +96,19 @@ async function sendCouponEmail(name, email, domain, discount, couponCode) {
   }
 
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
     auth: {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_APP_PASSWORD
-    }
+    },
+    tls: {
+      rejectUnauthorized: false,
+      minVersion: 'TLSv1.2'
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000
   });
 
   const textContent = `Hi ${name}!\n\nCongratulations! You just won ${discount}% OFF on ${domain} services from ZooTechX!\n\nYOUR COUPON CODE: ${couponCode}\n\nHow to Redeem:\n1. Visit the ZooTechX booth at the event\n2. Show this email or mention your coupon code\n3. Get your exclusive discount on ${domain}!\n\nThank you for participating!\n\nBest regards,\nZooTechX Team\nwww.zootechx.com`;
