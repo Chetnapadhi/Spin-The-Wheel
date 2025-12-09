@@ -1,7 +1,9 @@
 const express = require('express');
 const path = require('path');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 require('dotenv').config();
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -90,49 +92,34 @@ app.post('/api/spin', async (req, res) => {
 
 // Email function
 async function sendCouponEmail(name, email, domain, discount, couponCode) {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-    console.warn('Gmail not configured - skipping email');
+  if (!process.env.RESEND_API_KEY || !process.env.FROM_EMAIL) {
+    console.warn('Resend not configured - skipping email');
     return { success: false };
   }
-
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD
-    },
-    tls: {
-      rejectUnauthorized: false,
-      minVersion: 'TLSv1.2'
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000
-  });
-
-  const textContent = `Hi ${name}!\n\nCongratulations! You just won ${discount}% OFF on ${domain} services from ZooTechX!\n\nYOUR COUPON CODE: ${couponCode}\n\nHow to Redeem:\n1. Visit the ZooTechX booth at the event\n2. Show this email or mention your coupon code\n3. Get your exclusive discount on ${domain}!\n\nThank you for participating!\n\nBest regards,\nZooTechX Team\nwww.zootechx.com`;
 
   const logoUrl = process.env.SITE_URL ? `${process.env.SITE_URL}/Logo.jpg` : 'https://www.zootechx.com/logo.jpg';
   
   const htmlContent = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Your ZooTechX Coupon</title></head><body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background-color:#f4f4f4;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f4f4f4;padding:20px 0;"><tr><td align="center"><table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);"><tr><td style="background:#000000;padding:30px;text-align:center;"><a href="https://www.zootechx.com" target="_blank" style="text-decoration:none;"><img src="${logoUrl}" alt="ZooTechX" style="max-width:250px;height:auto;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';"><h1 style="color:#ffffff;margin:10px 0 0 0;font-size:28px;font-weight:bold;display:none;">ZooTechX</h1></a><p style="color:#888;margin:10px 0 0 0;font-size:14px;">Transforming Ideas into Digital Reality</p></td></tr><tr><td style="background:linear-gradient(135deg,#00d4ff 0%,#7b2dff 100%);padding:25px;text-align:center;"><h2 style="color:#ffffff;margin:0;font-size:24px;">🎉 Congratulations, ${name}!</h2></td></tr><tr><td style="padding:40px 30px;"><p style="color:#333;font-size:18px;margin:0 0 20px 0;text-align:center;">You just won <strong style="color:#00d4ff;font-size:24px;">${discount}% OFF</strong> on <strong>${domain}</strong> services!</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:30px 0;"><tr><td align="center"><table role="presentation" cellspacing="0" cellpadding="0" border="0" style="background-color:#f8f9fa;border:2px dashed #00d4ff;border-radius:12px;padding:25px 40px;"><tr><td align="center"><p style="color:#666;font-size:12px;margin:0 0 10px 0;text-transform:uppercase;letter-spacing:2px;">Your Coupon Code</p><p style="color:#1a1a2e;font-size:32px;font-weight:bold;margin:0;letter-spacing:3px;">${couponCode}</p></td></tr></table></td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f8f9fa;border-radius:8px;padding:20px;margin-top:20px;"><tr><td><h3 style="color:#1a1a2e;margin:0 0 15px 0;font-size:16px;">📋 How to Redeem</h3><p style="color:#555;margin:8px 0;font-size:14px;">1. Visit the ZooTechX booth at the event</p><p style="color:#555;margin:8px 0;font-size:14px;">2. Show this email or mention your coupon code</p><p style="color:#555;margin:8px 0;font-size:14px;">3. Get your exclusive discount on ${domain}!</p></td></tr></table></td></tr><tr><td style="background-color:#000000;padding:25px;text-align:center;"><a href="https://www.zootechx.com" target="_blank" style="text-decoration:none;"><img src="${logoUrl}" alt="ZooTechX" style="max-width:200px;height:auto;margin:0 0 10px 0;" onerror="this.style.display='none';"></a><p style="color:#888;font-size:12px;margin:0 0 10px 0;">Transforming Ideas into Digital Reality</p><p style="color:#00d4ff;font-size:12px;margin:0 0 10px 0;"><a href="https://www.zootechx.com" target="_blank" style="color:#00d4ff;text-decoration:none;">www.zootechx.com</a></p><p style="color:#666;font-size:11px;margin:0;">© 2025 ZooTechX. All rights reserved.</p></td></tr></table></td></tr></table></body></html>`;
 
-  const mailOptions = {
-    from: { name: 'ZooTechX', address: process.env.GMAIL_USER },
-    to: email,
-    subject: `Your ZooTechX Coupon Code - ${discount}% OFF on ${domain}`,
-    text: textContent,
-    html: htmlContent,
-    headers: {
-      'X-Priority': '3',
-      'X-Mailer': 'ZooTechX Promo System',
-      'List-Unsubscribe': `<mailto:${process.env.GMAIL_USER}?subject=Unsubscribe>`
-    }
-  };
+  try {
+    const { data, error } = await resend.emails.send({
+      from: `ZooTechX <${process.env.FROM_EMAIL}>`,
+      to: [email],
+      subject: `Your ZooTechX Coupon Code - ${discount}% OFF on ${domain}`,
+      html: htmlContent
+    });
 
-  const info = await transporter.sendMail(mailOptions);
-  console.log('Email sent:', info.messageId);
-  return { success: true };
+    if (error) {
+      console.error('Resend error:', error);
+      return { success: false };
+    }
+
+    console.log('Email sent successfully:', data.id);
+    return { success: true };
+  } catch (error) {
+    console.error('Email send error:', error);
+    throw error;
+  }
 }
 
 // SMS function
@@ -164,6 +151,6 @@ async function sendCouponSMS(name, phone, domain, discount, couponCode) {
 
 app.listen(PORT, () => {
   console.log(`✅ Server is running on port ${PORT}`);
-  console.log(`📧 Email configured: ${!!process.env.GMAIL_USER}`);
+  console.log(`📧 Email configured: ${!!process.env.RESEND_API_KEY}`);
   console.log(`📱 SMS configured: ${!!process.env.TWILIO_ACCOUNT_SID}`);
 });
